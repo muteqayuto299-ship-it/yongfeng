@@ -1,4 +1,4 @@
-# __DB_CLEAN__ patched
+# DB secret newline stripped at runtime
 name: 05-symbol表维护(周日)
 on:
   schedule:
@@ -24,6 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python -m pip install --upgrade pip
           pip install psycopg2-binary
 
@@ -33,4 +34,5 @@ jobs:
           TZ: Asia/Shanghai
 
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python "symbol表/src/02_add_auto_columns.py"
