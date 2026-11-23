@@ -1,4 +1,4 @@
-# __DB_CLEAN__ patched
+# DB secret newline stripped at runtime
 name: 04-新闻编排(akshare+RSS，X默认关闭)
 on:
   schedule:
@@ -24,6 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python -m pip install --upgrade pip
           pip install -r news_articles/requirements.txt
 
@@ -33,4 +34,5 @@ jobs:
           TZ: Asia/Shanghai
           ENABLE_TWITTER: '0'
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python news_articles/src/run_daily_news.py
