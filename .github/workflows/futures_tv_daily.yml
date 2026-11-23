@@ -1,4 +1,4 @@
-# __DB_CLEAN__ patched
+# DB secret newline stripped at runtime
 name: 02-外盘期货日线(TradingView)
 on:
   schedule:
@@ -24,6 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python -m pip install --upgrade pip
           pip install websocket-client psycopg2-binary pandas
 
@@ -33,4 +34,5 @@ jobs:
           TZ: Asia/Shanghai
 
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python "外盘期货日线数据库/src/update_daily_tv.py"
