@@ -120,14 +120,29 @@ def crawl_range(start_date: str, end_date: str):
 
 
 def load_market_info():
+    """获取「股票代码→行业/地域」映射，用于丰富公告字段。
+
+    该映射只影响 industry/province 两个附属字段（库表允许 NULL），
+    不影响公告主体入库。云端首次运行时既无东方财富接口可用、也无本地
+    sqlite 缓存，此时降级为空字典让主流程继续，避免整批公告写库失败。
+    """
     try:
-        return enrich_mod.fetch_region_industry()
+        info = enrich_mod.fetch_region_industry()
+        if info:
+            return info
+        print("market_info: fetch returned empty, will try cache/empty fallback")
     except Exception as exc:
+        print(f"market_info: fetch failed, reason={type(exc).__name__}: {exc}")
+    try:
         market_info = enrich_mod.load_cached_region_industry()
-        if not market_info:
-            raise
-        print(f"used_cached_region_industry=true reason={exc}")
-        return market_info
+    except Exception as exc:
+        print(f"market_info: cache load failed, reason={type(exc).__name__}: {exc}")
+        market_info = {}
+    if not market_info:
+        print("market_info: DEGRADED to empty (industry/province left NULL)")
+        return {}
+    print("used_cached_region_industry=true")
+    return market_info
 
 
 def enrich_rows(raw_rows, market_info):
