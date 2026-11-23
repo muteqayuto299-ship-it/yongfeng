@@ -1,4 +1,4 @@
-# __DB_CLEAN__ patched
+# DB secret newline stripped at runtime
 name: 00-探测数据源可达性(手动)
 on:
   schedule:
@@ -24,6 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python -m pip install --upgrade pip
           pip install requests akshare feedparser websocket-client
 
@@ -33,6 +34,7 @@ jobs:
           TZ: Asia/Shanghai
 
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python - <<'PY'
           import requests, sys
           targets = {
