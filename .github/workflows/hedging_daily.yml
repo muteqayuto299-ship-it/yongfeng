@@ -1,3 +1,4 @@
+# __DB_CLEAN__ patched
 name: 03-套保公告(巨潮)
 on:
   schedule:
