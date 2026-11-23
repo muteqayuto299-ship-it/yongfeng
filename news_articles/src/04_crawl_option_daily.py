@@ -285,7 +285,14 @@ def main():
                 if i % 50 == 0 or i == len(codes):
                     LOG.info("[%s] processed %d/%d contracts, rows=%d", variety, i, len(codes), len(rows))
         if failed_symbols:
-            raise RuntimeError(f"incomplete_history:{variety}:failed_contracts={len(failed_symbols)}:sample={','.join(failed_symbols[:5])}")
+            msg = (f"incomplete_history:{variety}:failed_contracts={len(failed_symbols)}"
+                   f":sample={','.join(failed_symbols[:5])}")
+            # STRICT_HISTORY=1 保留原严格语义（任一合约失败即中止，全部不写库）；
+            # 默认宽松：部分合约被新浪限流返回空时，仍把已成功抓取的行写库，
+            # 保证云端补抓能尽量补齐历史，失败合约留给下次运行重试（upsert 幂等）。
+            if os.environ.get("STRICT_HISTORY", "0") == "1":
+                raise RuntimeError(msg)
+            LOG.warning("DEGRADED write partial rows despite %s", msg)
         if no_history_symbols:
             LOG.info("[%s] contracts_without_dayline=%d sample=%s", variety, len(no_history_symbols), ",".join(no_history_symbols[:5]))
         print(f"[{variety}] 抓取行数={len(rows)}  用时 {time.time()-t0:.1f}s")
