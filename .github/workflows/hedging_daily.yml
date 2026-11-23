@@ -1,4 +1,4 @@
-# __DB_CLEAN__ patched
+# DB secret newline stripped at runtime
 name: 03-套保公告(巨潮)
 on:
   schedule:
@@ -24,6 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python -m pip install --upgrade pip
           pip install -r 套期保值hedging_announcements/requirements.txt
 
@@ -33,4 +34,5 @@ jobs:
           TZ: Asia/Shanghai
 
         run: |
+          export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python "套期保值hedging_announcements/src/04_incremental_update_postgres.py"
