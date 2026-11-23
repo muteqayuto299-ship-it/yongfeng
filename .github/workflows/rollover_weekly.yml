@@ -1,3 +1,4 @@
+# __DB_CLEAN__ patched
 name: 06-移仓换月宽表维护(周日)
 on:
   schedule:
