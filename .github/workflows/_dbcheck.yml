@@ -20,18 +20,21 @@ jobs:
         run: |
           python - <<'PYX'
           import os, psycopg2
-          url = os.environ.get("DATABASE_URL")
+          from urllib.parse import urlparse
+          url = os.environ.get("DATABASE_URL","")
           if not url:
               print("FAIL: DATABASE_URL secret is empty"); raise SystemExit(1)
           try:
+              p = urlparse(url)
+              print("URL STRUCTURE (password masked):", p.scheme, "user="+str(p.username), "host="+str(p.hostname), "port="+str(p.port), "database="+str(p.path), "query="+str(p.query))
+          except Exception as ex:
+              print("URL PARSE FAIL:", ex)
+          try:
               conn = psycopg2.connect(url, connect_timeout=20)
-              cur = conn.cursor()
-              cur.execute("SELECT 1")
+              cur = conn.cursor(); cur.execute("SELECT 1")
               print("DB CONNECT OK:", cur.fetchone()[0])
-              cur.execute("SELECT count(*) FROM information_schema.tables WHERE table_schema='public'")
-              print("PUBLIC TABLES:", cur.fetchone()[0])
               cur.close(); conn.close()
               print("=== DATABASE SECRET VALID ===")
           except Exception as e:
-              print("DB CONNECT FAIL:", type(e).__name__, str(e)[:200]); raise SystemExit(1)
+              print("DB CONNECT FAIL FULL:", str(e)); raise SystemExit(1)
           PYX
