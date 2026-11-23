@@ -1,3 +1,4 @@
+# __DB_CLEAN__ patched
 name: 02-外盘期货日线(TradingView)
 on:
   schedule:
