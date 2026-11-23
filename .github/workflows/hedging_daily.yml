@@ -4,6 +4,15 @@ on:
   schedule:
     - cron: '34 10 * * *'   # 北京时间 18:34 每日
   workflow_dispatch:   # 允许在 Actions 页面手动触发
+    inputs:
+      start_date:
+        description: '回补开始日期 YYYY-MM-DD（留空则沿用脚本默认=昨天）'
+        required: false
+        default: ''
+      end_date:
+        description: '回补结束日期 YYYY-MM-DD（留空则沿用脚本默认=今天）'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -35,4 +44,16 @@ jobs:
 
         run: |
           export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
-          python "套期保值hedging_announcements/src/04_incremental_update_postgres.py"
+          START="${{ github.event.inputs.start_date }}"
+          END="${{ github.event.inputs.end_date }}"
+          SCRIPT="套期保值hedging_announcements/src/04_incremental_update_postgres.py"
+          if [ -n "$START" ] && [ -n "$END" ]; then
+            echo "[backfill] start=$START end=$END"
+            python "$SCRIPT" "$START" "$END"
+          elif [ -n "$START" ]; then
+            echo "[backfill] start=$START end=(today)"
+            python "$SCRIPT" "$START"
+          else
+            echo "[daily] default range"
+            python "$SCRIPT"
+          fi
