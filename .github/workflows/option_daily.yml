@@ -1,3 +1,4 @@
+# schedule-refresh-20261124 202611241315
 # DB secret newline stripped at runtime
 name: 01-期权日线(新浪)
 on:

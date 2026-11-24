@@ -1,3 +1,4 @@
+# schedule-refresh-20261124 202611241315
 # DB secret newline stripped at runtime
 name: 02-外盘期货日线(TradingView)
 on:
