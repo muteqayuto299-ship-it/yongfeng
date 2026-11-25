@@ -78,15 +78,29 @@ def fetch_yahoo(start_d, end_d):
     if df is None or df.empty:
         log.warning("Yahoo 返回空")
         return []
+    import pandas as pd
+    ticker_level = None
+    if isinstance(df.columns, pd.MultiIndex):
+        # yfinance 多标的结构是 (Price, Ticker)：ticker 在 level=1
+        for lvl in (1, 0):
+            if ysym in df.columns.get_level_values(lvl):
+                ticker_level = lvl
+                break
     rows = []
     for product, (code, ysym, ex, ec) in PRODUCTS.items():
         try:
-            if len(PRODUCTS) == 1:
-                sub = df
-            elif isinstance(df.columns, __import__("pandas").MultiIndex):
-                sub = df.xs(ysym, axis=1, level=0)
+            if ticker_level is None:
+                sub = df.copy()
             else:
-                sub = df
+                sub = df.xs(ysym, axis=1, level=ticker_level).copy()
+                # xs 后若剩单列(Ticker 在 level=0 的情形)，升维成单行字段表
+                if not isinstance(sub.columns, pd.MultiIndex) and len(sub.columns) == 1:
+                    sub = sub.iloc[:, 0].to_frame()
+            for col in ("Open", "High", "Low", "Close", "Volume"):
+                if col not in sub.columns:
+                    cand = [c for c in sub.columns if str(c).lower() == col.lower()]
+                    if cand:
+                        sub = sub.rename(columns={cand[0]: col})
             sub = sub.dropna(subset=["Close"])
         except Exception as exc:
             log.warning("%s Yahoo 解析失败: %s", product, exc)
