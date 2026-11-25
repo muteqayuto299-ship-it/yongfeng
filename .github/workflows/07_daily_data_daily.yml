@@ -1,8 +1,10 @@
-# DB secret newline stripped at runtime
+# daily_data 外盘日线日更 v2：东财为主源、Yahoo 仅补缺口、拦截未收盘交易日
+# cron 用 UTC：21:30 UTC = 美中时间 15:30（CBOT 谷物 13:20 CT 收盘之后）
+# = 北京时间次日 05:30
 name: 07-daily_data外盘日线(东财COBOT5)
 on:
   schedule:
-    - cron: '36 10 * * *'   # 北京时间 18:36 每日（错开 18:30/32/34 三个任务）
+    - cron: '30 21 * * *'
   workflow_dispatch:   # 允许在 Actions 页面手动触发
 
 permissions:
@@ -30,8 +32,7 @@ jobs:
       - name: Run daily_data incremental update
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          LOOKBACK_DAYS: '7'
-          TZ: Asia/Shanghai
+          LOOKBACK_DAYS: '20'
         run: |
           export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python "外盘期货日线数据库/src/update_daily_data.py"
@@ -43,10 +44,24 @@ jobs:
           export DATABASE_URL="$(printf '%s' "$DATABASE_URL" | tr -d '\r\n')"
           python - <<'PY'
           import os, psycopg2
-          with psycopg2.connect(os.environ["DATABASE_URL"], connect_timeout=15) as c:
-              with c.cursor() as cur:
-                  cur.execute("select count(*), count(distinct contract_code), max(trade_date), count(*) filter(where close is null) from public.daily_data")
-                  total, ncode, dmax, null_close = cur.fetchone()
-          print(f"daily_data: total={total} contracts={ncode} max_date={dmax} null_close={null_close}")
-          assert ncode == 5 and null_close == 0, "验收失败"
+          from datetime import datetime, timedelta
+          from zoneinfo import ZoneInfo
+          url = os.environ["DATABASE_URL"]
+          lim = (datetime.now(ZoneInfo("America/Chicago")) - timedelta(hours=13, minutes=20)).date()
+          with psycopg2.connect(url, connect_timeout=20) as c, c.cursor() as cur:
+              cur.execute("""select count(*), count(distinct contract_code), max(trade_date),
+                                    count(*) filter (where close is null)
+                             from public.daily_data""")
+              total, ncode, dmax, null_close = cur.fetchone()
+              cur.execute("""select count(*) from (
+                               select contract_code, trade_date, vol,
+                                      lag(vol) over (partition by contract_code order by trade_date) pv
+                                 from public.daily_data) t
+                              where pv is not null and vol = pv""")
+              ndup = cur.fetchone()[0]
+          print(f"daily_data: total={total} contracts={ncode} max_date={dmax} "
+                f"null_close={null_close} dup_vol={ndup} last_final={lim}")
+          assert ncode == 5 and null_close == 0, "验收失败：品种数/空收盘价"
+          assert dmax <= lim, f"写入未收盘交易日 {dmax} > {lim}"
+          assert ndup == 0, f"相邻交易日成交量重复 {ndup} 处（疑似源串味）"
           PY
