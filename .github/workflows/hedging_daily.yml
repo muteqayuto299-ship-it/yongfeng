@@ -1,9 +1,13 @@
+# cron-redundant-20261125
 # schedule-refresh-20261124 202611241315
 # DB secret newline stripped at runtime
 name: 03-套保公告(巨潮)
 on:
   schedule:
-    - cron: '34 10 * * *'   # 北京时间 18:34 每日
+    - cron: '0 0 * * *'   # 冗余点1 UTC00:00
+    - cron: '0 6 * * *'   # 冗余点2 UTC06:00
+    - cron: '0 12 * * *'  # 冗余点3 UTC12:00
+    - cron: '0 18 * * *'  # 冗余点4 UTC18:00
   workflow_dispatch:   # 允许在 Actions 页面手动触发
     inputs:
       start_date:
