@@ -82,7 +82,11 @@ def main():
                    count(*) filter (where notional_usd is null)
             from public.daily_data""")
         total, n_pct, n_amp, n_not = cur.fetchone()
-        log.info("行数=%d  pct_chg空=%d  amplitude空=%d  notional空=%d", total, n_pct, n_amp, n_not)
+        # 每个品种的首个交易日没有前收盘价，涨跌幅/振幅只能为 NULL —— 这是正确行为
+        cur.execute("select count(*) from public.daily_data where pre_close is null")
+        n_noprev = cur.fetchone()[0]
+        log.info("行数=%d  pct_chg空=%d  amplitude空=%d  notional空=%d  无前收盘价行=%d",
+                 total, n_pct, n_amp, n_not, n_noprev)
 
         # 与原始定义逐行比对（应全 0）
         cur.execute("""
@@ -113,8 +117,8 @@ def main():
 
     checks = [
         ("总行数 == 1130", total == 1130, total),
-        ("pct_chg 无空值", n_pct == 0, n_pct),
-        ("amplitude 无空值", n_amp == 0, n_amp),
+        ("pct_chg 空值数 == 无前收盘价行数", n_pct == n_noprev, f"{n_pct} vs {n_noprev}"),
+        ("amplitude 空值数 == 无前收盘价行数", n_amp == n_noprev, f"{n_amp} vs {n_noprev}"),
         ("notional_usd 无空值", n_not == 0, n_not),
         ("change1 与 close-pre_close 一致", bad_ch == 0, bad_ch),
         ("pct_chg 与定义一致", bad_pct == 0, bad_pct),
