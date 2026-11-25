@@ -82,8 +82,10 @@ def fetch_yahoo(start_d, end_d):
     ticker_level = None
     if isinstance(df.columns, pd.MultiIndex):
         # yfinance 多标的结构是 (Price, Ticker)：ticker 在 level=1
+        # 用任一 ticker 探测 level（此循环在品种 for 之前，不能用 ysym）
+        probe = next(iter(PRODUCTS.values()))[1]
         for lvl in (1, 0):
-            if ysym in df.columns.get_level_values(lvl):
+            if probe in df.columns.get_level_values(lvl):
                 ticker_level = lvl
                 break
     rows = []
